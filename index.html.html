@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWR Comparator Pay Calculator (Education)</title>
+<style>
+  /* ---------- BASE ---------- */
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.5;
+    color: #1f2937;
+    background: #f5f7fa;
+    margin: 0;
+    padding: 24px 16px;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; }
+
+  /* ---------- HEADER ---------- */
+  header.app-header {
+    background: #1e3a5f;
+    color: #fff;
+    padding: 24px 28px;
+    border-radius: 8px 8px 0 0;
+  }
+  header.app-header .title-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  header.app-header h1 { margin: 0; font-size: 1.4rem; font-weight: 600; }
+  header.app-header .beta-badge {
+    background: #ffe082;
+    color: #5d4e10;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  header.app-header .status-line {
+    background: rgba(255, 224, 130, 0.15);
+    border-left: 3px solid #ffe082;
+    padding: 8px 12px;
+    margin: 8px 0 10px 0;
+    font-size: 0.88rem;
+    color: #fef3c7;
+  }
+  header.app-header .status-line strong { color: #fff8e1; }
+  header.app-header p.subtitle { margin: 0; opacity: 0.85; font-size: 0.92rem; }
+
+  /* ---------- LAYOUT ---------- */
+  main {
+    background: #fff;
+    border: 1px solid #e3e8ef;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    padding: 28px;
+  }
+  section { margin-bottom: 28px; }
+  section:last-child { margin-bottom: 0; }
+  h2 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #1e3a5f;
+    border-bottom: 2px solid #e3e8ef;
+    padding-bottom: 6px;
+    margin: 0 0 16px 0;
+  }
+
+  /* ---------- FORM ---------- */
+  .field { margin-bottom: 14px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 600px) { .field-row { grid-template-columns: 1fr; } }
+  label { display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 4px; color: #374151; }
+  .help { font-size: 0.78rem; color: #6b7280; margin-top: 3px; }
+  input[type="number"], input[type="text"], select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    background: #f0f6ff; /* blue input cells, mirroring the spreadsheet */
+    font-size: 0.95rem;
+    font-family: inherit;
+  }
+  input:focus, select:focus {
+    outline: 2px solid #2563eb;
+    outline-offset: -1px;
+    border-color: #2563eb;
+  }
+  input[readonly] { background: #f3f4f6; color: #6b7280; }
+
+  details.advanced {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: #f8fafc;
+    border: 1px solid #e3e8ef;
+    border-radius: 4px;
+  }
+  details.advanced summary {
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: #475569;
+    font-weight: 500;
+  }
+  details.advanced[open] summary { margin-bottom: 10px; }
+
+  /* ---------- RESULT ---------- */
+  .result {
+    background: #eef4fb;
+    border: 1px solid #bcd4ed;
+    border-radius: 6px;
+    padding: 20px 22px;
+  }
+  .result-headline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 28px;
+    margin-bottom: 18px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #bcd4ed;
+  }
+  .rate-block .rate-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #475569;
+    margin-bottom: 2px;
+  }
+  .rate-block .rate-value {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #1e3a5f;
+    line-height: 1.1;
+  }
+  .rate-block .rate-sub {
+    font-size: 0.78rem;
+    color: #64748b;
+    margin-top: 2px;
+  }
+
+  .breakdown-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    margin-bottom: 14px;
+  }
+  .breakdown-table td {
+    padding: 6px 4px;
+    border-bottom: 1px solid #d8e4f1;
+  }
+  .breakdown-table td:last-child {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .breakdown-table tr.total td {
+    font-weight: 600;
+    border-bottom: 2px solid #1e3a5f;
+  }
+  .breakdown-table tr.subtle td { color: #64748b; }
+
+  .method-note, .meta {
+    font-size: 0.82rem;
+    color: #475569;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px dashed #bcd4ed;
+  }
+  .meta { color: #6b7280; }
+
+  /* ---------- BUTTONS ---------- */
+  .actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+  }
+  button {
+    background: #1e3a5f;
+    color: #fff;
+    border: none;
+    padding: 9px 16px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  button:hover { background: #2c4d7a; }
+  button.secondary {
+    background: #fff;
+    color: #1e3a5f;
+    border: 1px solid #1e3a5f;
+  }
+  button.secondary:hover { background: #eef4fb; }
+
+  /* ---------- HOW PANEL ---------- */
+  details.how {
+    margin-top: 16px;
+    background: #fafbfd;
+    border: 1px solid #e3e8ef;
+    border-radius: 4px;
+    padding: 12px 16px;
+  }
+  details.how summary {
+    cursor: pointer;
+    font-weight: 500;
+    color: #1e3a5f;
+  }
+  details.how[open] summary { margin-bottom: 8px; }
+  details.how p, details.how ul { font-size: 0.88rem; color: #374151; margin: 6px 0; }
+  details.how li { margin-bottom: 4px; }
+
+  /* ---------- DISCLAIMER ---------- */
+  .disclaimer {
+    font-size: 0.78rem;
+    color: #6b7280;
+    background: #f8fafc;
+    padding: 12px 14px;
+    border-left: 3px solid #cbd5e1;
+    margin-top: 18px;
+    line-height: 1.5;
+  }
+
+  /* ---------- FOOTER ---------- */
+  footer.app-footer {
+    text-align: center;
+    padding: 22px 16px 8px;
+    font-size: 0.85rem;
+    color: #475569;
+  }
+  footer.app-footer a { color: #1e3a5f; font-weight: 500; }
+  .cta-card {
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-top: 18px;
+    font-size: 0.88rem;
+    color: #5d4e10;
+  }
+  .cta-card a { color: #5d4e10; font-weight: 600; }
+
+  /* NJC pay-scale warning — same visual tone as cta-card but red for "pay attention" */
+  .njc-warning {
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    border-left: 4px solid #b91c1c;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin: 0 0 18px 0;
+    font-size: 0.88rem;
+    color: #7f1d1d;
+    line-height: 1.45;
+  }
+  .njc-warning strong { color: #7f1d1d; }
+  .njc-warning a { color: #7f1d1d; font-weight: 600; }
+  /* In-result variant prints with the result */
+  .njc-warning.in-result { margin: 0 0 18px 0; }
+
+  .hide { display: none !important; }
+
+  /* ---------- PRINT ---------- */
+  @media print {
+    body { background: #fff; padding: 0; font-size: 11pt; }
+    .wrap { max-width: none; }
+    header.app-header { background: #fff; color: #000; border: none; padding: 0 0 12px 0; }
+    header.app-header h1 { color: #000; }
+    /* Keep MVP/Beta indicators clearly visible in print */
+    header.app-header .beta-badge {
+      background: #fff !important;
+      border: 1.5px solid #000;
+      color: #000 !important;
+    }
+    header.app-header .status-line {
+      background: #fff !important;
+      border-left: 3px solid #000 !important;
+      color: #000 !important;
+    }
+    header.app-header .status-line strong { color: #000 !important; }
+    main { border: none; padding: 0; }
+    .no-print, .no-print * { display: none !important; }
+    section.input-section { display: none; }
+    details.how[open] summary { display: none; }
+    details.how { border: none; padding: 0; background: none; }
+    .result { background: #fff; border: 1px solid #000; }
+    .cta-card { display: none; }
+    /* NJC warning prints with strong B&W styling so it's visible even on greyscale printers */
+    .njc-warning {
+      background: #fff !important;
+      border: 1px solid #000 !important;
+      border-left: 4px solid #000 !important;
+      color: #000 !important;
+    }
+    .njc-warning strong { color: #000 !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="app-header">
+  <div class="title-row">
+    <h1>AWR Comparator Pay Calculator</h1>
+    <span class="beta-badge">MVP · Beta</span>
+  </div>
+  <p class="status-line"><strong>Working product, still in testing.</strong> Calculations are fully functional, but this version is being shared with a select group for feedback before wider release. Results should be sense-checked.</p>
+  <p class="subtitle">Education sector — Teachers (STPCD) and Support Staff (NJC). For use after the 12-week qualifying period under the Agency Workers Regulations 2010.</p>
+</header>
+
+<main>
+
+<!-- ============== INPUTS ============== -->
+<section class="input-section no-print" id="inputs">
+  <h2>Inputs</h2>
+
+  <div class="field-row">
+    <div class="field">
+      <label for="payYear">Pay year</label>
+      <select id="payYear"></select>
+    </div>
+    <div class="field">
+      <label for="roleType">Role type</label>
+      <select id="roleType">
+        <option value="qt">Qualified Teacher (STPCD)</option>
+        <option value="uqt">Unqualified Teacher (STPCD)</option>
+        <option value="njc">Support Staff (NJC)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="field-row">
+    <div class="field">
+      <label for="region">Region</label>
+      <select id="region"></select>
+    </div>
+    <div class="field">
+      <label for="payPoint">Pay point</label>
+      <select id="payPoint"></select>
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="fteSalary">FTE salary (£) — auto-filled from pay point, override only if non-standard (e.g. academy)</label>
+    <input type="number" id="fteSalary" min="0" step="1">
+  </div>
+
+  <!-- Teacher allowances (visible for QT / UQT) -->
+  <div id="teacherAllowances">
+    <div class="field-row">
+      <div class="field">
+        <label for="tlrAmount">TLR (£ p.a., optional)</label>
+        <input type="number" id="tlrAmount" min="0" step="1" value="0">
+        <div class="help" id="tlrHelp"></div>
+      </div>
+      <div class="field">
+        <label for="senAmount">SEN allowance (£ p.a., optional)</label>
+        <input type="number" id="senAmount" min="0" step="1" value="0">
+        <div class="help" id="senHelp"></div>
+      </div>
+    </div>
+    <details class="advanced">
+      <summary>Advanced: override directed days / hours per day</summary>
+      <div class="field-row">
+        <div class="field">
+          <label for="directedDays">Directed days per year</label>
+          <input type="number" id="directedDays" min="1" step="1" value="195">
+          <div class="help">STPCD default 195. Adjust only for school years with extra bank holidays.</div>
+        </div>
+        <div class="field">
+          <label for="hoursPerDay">Hours per teaching day</label>
+          <input type="number" id="hoursPerDay" min="0.5" step="0.25" value="6.5">
+          <div class="help">Standard convention 6.5 (half day 3.25).</div>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <!-- NJC inputs (visible for Support Staff) -->
+  <div id="njcInputs" class="hide">
+    <div class="njc-warning" id="njcWarningInput">
+      <strong>Important — NJC pay scale notice.</strong>
+      The pay scale shown is the <strong>2025/26</strong> NJC scale. At the time of this MVP release, the 2026/27 NJC pay offer had <strong>not yet been accepted</strong>. Any parity rate calculated for work undertaken on or after <strong>1 April 2026</strong> using the 25/26 scale will almost certainly need to be recalculated and the pay rate increased once the new scale is agreed.
+    </div>
+    <div class="field">
+      <label for="njcSenAmount">SEN allowance (£ p.a., optional)</label>
+      <input type="number" id="njcSenAmount" min="0" step="1" value="0">
+      <div class="help" id="njcSenHelp"></div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="fteHoursPerWeek">FTE hours per week</label>
+        <input type="number" id="fteHoursPerWeek" min="1" step="0.25">
+        <div class="help">36 in London boroughs, 37 in Rest of England (auto-filled).</div>
+      </div>
+      <div class="field">
+        <label for="holidayDays">FTE holiday days (incl. bank holidays)</label>
+        <input type="number" id="holidayDays" min="28" step="1" value="28">
+        <div class="help">FTE statutory minimum is 28 days (locked floor). Part-year workers receive a pro-rated equivalent automatically. Increase above 28 to match LA / school / Trust policy if it grants more.</div>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="actualWeeks">Actual weeks worked</label>
+        <input type="number" id="actualWeeks" min="1" max="52" step="0.5" value="39">
+        <div class="help">39 = standard term-time-only.</div>
+      </div>
+      <div class="field">
+        <label for="actualHoursPerWeek">Actual hours per week</label>
+        <input type="number" id="actualHoursPerWeek" min="0.5" step="0.25" value="32.5">
+      </div>
+    </div>
+    <div class="field">
+      <label for="actualDaysPerWeek">Actual days per week</label>
+      <input type="number" id="actualDaysPerWeek" min="1" max="7" step="0.5" value="5">
+      <div class="help">Used for the daily rate calculation. Hourly rate is unaffected.</div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button type="button" id="calcBtn">Calculate comparator rate</button>
+    <button type="button" id="resetBtn" class="secondary">Reset inputs</button>
+  </div>
+</section>
+
+<!-- ============== RESULT ============== -->
+<section id="resultSection" class="hide">
+  <h2>Comparator Pay Rate</h2>
+  <div class="result" id="resultPanel">
+    <!-- populated by JS -->
+  </div>
+
+  <div class="actions no-print">
+    <button type="button" onclick="window.print()">Print / Save as PDF</button>
+  </div>
+
+  <details class="how no-print">
+    <summary>How this is calculated</summary>
+    <div id="howContent"></div>
+  </details>
+
+  <div class="cta-card no-print">
+    <strong>Early MVP / beta version.</strong> This calculator is being shared with a select group for feedback before wider release. If you have any feedback — bugs, accuracy concerns, missing features, wording suggestions — please email
+    <a id="contactLink" href="#"></a>.
+  </div>
+
+  <div class="disclaimer">
+    <strong>Disclaimer:</strong>
+    This calculator produces the AWR comparator pay rate based on the inputs provided, using the STPCD method (Teachers) or rolled-up holiday method per the Working Time Regulations 1998 as amended by the Employment Rights (Amendment, Revocation and Transitional Provision) Regulations 2023 (Support Staff). It does not constitute legal advice. Disputes about which comparator role, pay scale point, or pay-scale year applies, or about long-duration full-time placements where rolled-up holiday pay may not be appropriate, should be resolved between the parties or escalated to a qualified adviser.
+  </div>
+</section>
+
+</main>
+
+<footer class="app-footer no-print">
+  <p>JG Education Consultancy &nbsp;·&nbsp; <a id="footerContact" href="#"></a></p>
+  <p style="font-size: 0.75rem; color: #94a3b8;">© 2026 JG Education Consultancy. All rights reserved. &nbsp;·&nbsp; v0.1 Beta — feedback welcomed</p>
+</footer>
+
+</div>
+
+<!-- =====================================================================
+     CONFIG  —  edit these values to rebrand or change defaults
+     ===================================================================== -->
+<script>
+const CONFIG = {
+  contact_email: "jgeducationconsultancy@gmail.com",
+  contact_label: "JG Education Consultancy",
+  default_pay_year: "2025-26",
+  default_role: "qt",
+  // Teacher constants (STPCD)
+  teacher_directed_days: 195,
+  teacher_hours_per_day: 6.5,
+  // NJC constants
+  njc_default_holiday_days: 28,
+  njc_default_actual_weeks: 39,
+  njc_default_days_per_week: 5,
+  njc_london_hours_per_week: 36,
+  njc_rest_of_england_hours_per_week: 37,
+  // Standard reference for holiday-pay percentage derivation: 5 days × 52 weeks
+  njc_total_working_days_year: 260,
+  // 52.14 = 365.25 / 7 (weeks in a year, used in NJC hourly derivation)
+  njc_weeks_in_year: 52.14
+};
+
+/* =====================================================================
+   PAY SCALE DATA  —  EDIT EACH SEPTEMBER WHEN STPCD/NJC CHANGES
+   =====================================================================
+   To add a new pay year (e.g. 2026/27):
+     1. Copy the entire "2025-26" object.
+     2. Change the key to "2026-27".
+     3. Update the salary numbers from the published STPCD and NJC scales.
+     4. Update teacher_allowances min/max if the published ranges have changed.
+     5. The pay-year dropdown auto-populates from this object.
+   Source for 25/26: NEU teacher salaries page; NJC April 2025 agreement.
+   ===================================================================== */
+const PAY_DATA = {
+  "2025-26": {
+    note: "Effective 1 September 2025 (teachers) / 1 April 2025 (NJC support).",
+    qualified_teacher: {
+      // [rest_of_england, london_fringe, outer_london, inner_london]
+      "M1": [32916, 34398, 37870, 40317],
+      "M2": [34823, 36373, 39851, 42234],
+      "M3": [37101, 38627, 41935, 44238],
+      "M4": [39556, 41075, 44128, 46339],
+      "M5": [42057, 43545, 46800, 48952],
+      "M6": [45352, 46839, 50474, 52300],
+      "U1": [47472, 48913, 52219, 57632],
+      "U2": [49232, 50668, 54151, 60464],
+      "U3": [51048, 52490, 56154, 62496]
+    },
+    unqualified_teacher: {
+      "1": [22601, 24066, 26789, 28343],
+      "2": [25193, 26656, 29383, 30935],
+      "3": [27785, 29248, 31974, 33528],
+      "4": [30071, 31532, 34265, 35814],
+      "5": [32667, 34126, 36856, 38402],
+      "6": [35259, 36718, 39450, 40994]
+    },
+    njc_support: {
+      // [rest_of_england, outer_london, inner_london]
+      "SCP 2":  [24413, 28221, 29808],
+      "SCP 3":  [24796, 28617, 30225],
+      "SCP 4":  [25185, 29025, 30654],
+      "SCP 5":  [25583, 29436, 31086],
+      "SCP 6":  [25989, 29856, 31530],
+      "SCP 7":  [26403, 30288, 31980],
+      "SCP 8":  [26824, 30717, 32442],
+      "SCP 9":  [27254, 31158, 32907],
+      "SCP 10": [27694, 31611, 33384],
+      "SCP 11": [28142, 32070, 33870],
+      "SCP 12": [28598, 32535, 34359],
+      "SCP 13": [29064, 33012, 34863],
+      "SCP 14": [29540, 33495, 35373],
+      "SCP 15": [30024, 33987, 35892],
+      "SCP 16": [30518, 34488, 36423],
+      "SCP 17": [31022, 34998, 36963],
+      "SCP 18": [31537, 35520, 37509],
+      "SCP 19": [32061, 36048, 38070],
+      "SCP 20": [32597, 36585, 38637],
+      "SCP 21": [33143, 37134, 39216]
+      // Add further SCPs as needed for higher support roles
+    },
+    teacher_allowances: {
+      tlr1: { min: 10174, max: 17216 },
+      tlr2: { min: 3527,  max: 8611  },
+      tlr3: { min: 702,   max: 3478  },
+      sen:  { min: 2787,  max: 5497  }
+    },
+    njc_sen_allowance: 1539
+  }
+  // ---- ADD FUTURE PAY YEARS BELOW ----
+};
+
+const TEACHER_REGIONS = [
+  { key: 0, label: "Rest of England" },
+  { key: 1, label: "London Fringe" },
+  { key: 2, label: "Outer London" },
+  { key: 3, label: "Inner London" }
+];
+const NJC_REGIONS = [
+  { key: 0, label: "Rest of England" },
+  { key: 1, label: "Outer London" },
+  { key: 2, label: "Inner London" }
+];
+
+/* =====================================================================
+   DOM REFS
+   ===================================================================== */
+const $ = (id) => document.getElementById(id);
+const els = {
+  payYear: $("payYear"), roleType: $("roleType"), region: $("region"),
+  payPoint: $("payPoint"), fteSalary: $("fteSalary"),
+  teacherAllowances: $("teacherAllowances"),
+  tlrAmount: $("tlrAmount"), senAmount: $("senAmount"),
+  tlrHelp: $("tlrHelp"), senHelp: $("senHelp"),
+  directedDays: $("directedDays"), hoursPerDay: $("hoursPerDay"),
+  njcInputs: $("njcInputs"),
+  njcSenAmount: $("njcSenAmount"), njcSenHelp: $("njcSenHelp"),
+  fteHoursPerWeek: $("fteHoursPerWeek"),
+  holidayDays: $("holidayDays"),
+  actualWeeks: $("actualWeeks"),
+  actualHoursPerWeek: $("actualHoursPerWeek"),
+  actualDaysPerWeek: $("actualDaysPerWeek"),
+  calcBtn: $("calcBtn"), resetBtn: $("resetBtn"),
+  resultSection: $("resultSection"), resultPanel: $("resultPanel"),
+  howContent: $("howContent"),
+  contactLink: $("contactLink"), footerContact: $("footerContact")
+};
+
+/* =====================================================================
+   POPULATION HELPERS
+   ===================================================================== */
+function fmtGBP(n) {
+  if (n === null || n === undefined || isNaN(n)) return "—";
+  return "£" + n.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function fmtPct(n) {
+  return (n * 100).toFixed(2) + "%";
+}
+function fmtInt(n) {
+  return Number(n).toLocaleString("en-GB");
+}
+
+function populatePayYear() {
+  const years = Object.keys(PAY_DATA).sort().reverse();
+  els.payYear.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join("");
+  els.payYear.value = CONFIG.default_pay_year in PAY_DATA ? CONFIG.default_pay_year : years[0];
+}
+
+function populateRegion() {
+  const role = els.roleType.value;
+  const regions = (role === "njc") ? NJC_REGIONS : TEACHER_REGIONS;
+  els.region.innerHTML = regions.map(r => `<option value="${r.key}">${r.label}</option>`).join("");
+  els.region.value = "0";
+}
+
+function populatePayPoint() {
+  const year = els.payYear.value;
+  const role = els.roleType.value;
+  const data = PAY_DATA[year];
+  let scale;
+  if (role === "qt") scale = data.qualified_teacher;
+  else if (role === "uqt") scale = data.unqualified_teacher;
+  else scale = data.njc_support;
+  const points = Object.keys(scale);
+  els.payPoint.innerHTML = points.map(p => `<option value="${p}">${p}</option>`).join("");
+  els.payPoint.value = points[0];
+  updateFteSalary();
+}
+
+function updateFteSalary() {
+  const year = els.payYear.value;
+  const role = els.roleType.value;
+  const region = parseInt(els.region.value, 10);
+  const point = els.payPoint.value;
+  const data = PAY_DATA[year];
+  let arr;
+  if (role === "qt") arr = data.qualified_teacher[point];
+  else if (role === "uqt") arr = data.unqualified_teacher[point];
+  else arr = data.njc_support[point];
+  if (arr && arr[region] !== undefined) {
+    els.fteSalary.value = arr[region];
+  }
+  updateAllowanceHelpers();
+}
+
+function updateAllowanceHelpers() {
+  const year = els.payYear.value;
+  const role = els.roleType.value;
+  const data = PAY_DATA[year];
+  if (role === "qt" || role === "uqt") {
+    if (role === "qt") {
+      els.tlrHelp.textContent =
+        `TLR1 £${fmtInt(data.teacher_allowances.tlr1.min)}–£${fmtInt(data.teacher_allowances.tlr1.max)} · ` +
+        `TLR2 £${fmtInt(data.teacher_allowances.tlr2.min)}–£${fmtInt(data.teacher_allowances.tlr2.max)} · ` +
+        `TLR3 £${fmtInt(data.teacher_allowances.tlr3.min)}–£${fmtInt(data.teacher_allowances.tlr3.max)}`;
+      els.senHelp.textContent =
+        `SEN £${fmtInt(data.teacher_allowances.sen.min)}–£${fmtInt(data.teacher_allowances.sen.max)} per annum.`;
+    } else {
+      els.tlrHelp.textContent = "Unqualified teachers are not normally eligible for TLR — leave at 0 unless your school operates an exception.";
+      els.senHelp.textContent = "Unqualified teachers may receive SEN allowance in some cases.";
+    }
+  } else if (role === "njc") {
+    els.njcSenHelp.textContent = `Standard NJC SEN allowance for ${els.payYear.value}: £${fmtInt(data.njc_sen_allowance)} per annum (default 0; enter if applicable).`;
+  }
+}
+
+function updateRegionDependentFields() {
+  const role = els.roleType.value;
+  if (role === "njc") {
+    const region = parseInt(els.region.value, 10);
+    // 0 = Rest of England, 1 = Outer London, 2 = Inner London
+    const fteHours = (region === 0)
+      ? CONFIG.njc_rest_of_england_hours_per_week
+      : CONFIG.njc_london_hours_per_week;
+    els.fteHoursPerWeek.value = fteHours;
+    if (parseFloat(els.actualHoursPerWeek.value) === 0 || isNaN(parseFloat(els.actualHoursPerWeek.value))) {
+      els.actualHoursPerWeek.value = fteHours;
+    }
+  }
+}
+
+function updateRoleVisibility() {
+  const role = els.roleType.value;
+  if (role === "njc") {
+    els.teacherAllowances.classList.add("hide");
+    els.njcInputs.classList.remove("hide");
+  } else {
+    els.teacherAllowances.classList.remove("hide");
+    els.njcInputs.classList.add("hide");
+  }
+}
+
+/* =====================================================================
+   CALCULATIONS
+   ===================================================================== */
+function calculateTeacher(opts) {
+  const { fte, allowanceTotal, directedDays, hoursPerDay } = opts;
+  const totalFte = fte + allowanceTotal;
+  const dailyRate = totalFte / directedDays;
+  const hourlyRate = dailyRate / hoursPerDay;
+  return {
+    role: opts.role, totalFte, fte, allowanceTotal,
+    directedDays, hoursPerDay,
+    dailyRate, hourlyRate
+  };
+}
+
+function calculateNjc(opts) {
+  const {
+    fte, allowanceTotal, fteHoursPerWeek,
+    actualWeeks, actualHoursPerWeek, actualDaysPerWeek
+  } = opts;
+  // Hard floor: FTE holiday days cannot fall below 28 (statutory minimum).
+  // Part-year workers are pro-rated via the actualWeeks / actualHoursPerWeek inputs.
+  const holidayDays = Math.max(28, opts.holidayDays);
+  const totalFte = fte + allowanceTotal;
+  // Hourly basic from FTE (matches CL17 in spreadsheet)
+  const hourlyBasic = (totalFte / CONFIG.njc_weeks_in_year) / fteHoursPerWeek;
+  const weeklyBasic = hourlyBasic * actualHoursPerWeek;
+  const annualNoHoliday = weeklyBasic * actualWeeks;
+  // Holiday-pay percentage = holiday_days / (working_days_year - holiday_days)
+  // Rounded to 4 decimal places to match the published 12.07% figure and the
+  // source spreadsheet exactly. Without this rounding the result is sub-penny
+  // different but cross-checks against existing payroll spreadsheets can flag
+  // the discrepancy unhelpfully.
+  const holidayPctRaw = holidayDays / (CONFIG.njc_total_working_days_year - holidayDays);
+  const holidayPct = Math.round(holidayPctRaw * 10000) / 10000;
+  const holidayAmount = annualNoHoliday * holidayPct;
+  const annualWithHoliday = annualNoHoliday + holidayAmount;
+  const totalActualDays = actualWeeks * actualDaysPerWeek;
+  const dailyRolled = annualWithHoliday / totalActualDays;
+  const hourlyRolled = annualWithHoliday / actualWeeks / actualHoursPerWeek;
+  const dailyBasic = annualNoHoliday / totalActualDays;
+  const hourlyBasicOut = annualNoHoliday / actualWeeks / actualHoursPerWeek;
+  const dailyHolidayElement = dailyRolled - dailyBasic;
+  const hourlyHolidayElement = hourlyRolled - hourlyBasicOut;
+  return {
+    role: "njc", totalFte, fte, allowanceTotal,
+    fteHoursPerWeek, holidayDays, actualWeeks, actualHoursPerWeek, actualDaysPerWeek,
+    annualNoHoliday, holidayPct, holidayAmount, annualWithHoliday,
+    totalActualDays, dailyRolled, hourlyRolled,
+    dailyBasic, hourlyBasic: hourlyBasicOut,
+    dailyHolidayElement, hourlyHolidayElement
+  };
+}
+
+/* =====================================================================
+   RENDER
+   ===================================================================== */
+function renderResult(r, meta) {
+  const ts = new Date().toLocaleString("en-GB");
+  const isTeacher = r.role !== "njc";
+  let html = "";
+
+  if (isTeacher) {
+    const roleName = r.role === "qt" ? "Qualified Teacher" : "Unqualified Teacher";
+    html += `
+      <div class="result-headline">
+        <div class="rate-block">
+          <div class="rate-label">Daily comparator rate</div>
+          <div class="rate-value">${fmtGBP(r.dailyRate)}</div>
+          <div class="rate-sub">per directed working day</div>
+        </div>
+        <div class="rate-block">
+          <div class="rate-label">Hourly comparator rate</div>
+          <div class="rate-value">${fmtGBP(r.hourlyRate)}</div>
+          <div class="rate-sub">at ${r.hoursPerDay} hours per day</div>
+        </div>
+      </div>
+
+      <table class="breakdown-table">
+        <tr><td>Pay year</td><td>${meta.payYear}</td></tr>
+        <tr><td>Role</td><td>${roleName}</td></tr>
+        <tr><td>Region</td><td>${meta.regionLabel}</td></tr>
+        <tr><td>Pay point</td><td>${meta.payPoint}</td></tr>
+        <tr><td>FTE salary</td><td>${fmtGBP(r.fte)}</td></tr>
+        <tr><td>Allowances (TLR + SEN)</td><td>${fmtGBP(r.allowanceTotal)}</td></tr>
+        <tr class="total"><td>Total FTE used</td><td>${fmtGBP(r.totalFte)}</td></tr>
+        <tr class="subtle"><td>Directed days</td><td>${r.directedDays}</td></tr>
+        <tr class="subtle"><td>÷ directed days</td><td>${fmtGBP(r.dailyRate)} / day</td></tr>
+        <tr class="subtle"><td>÷ ${r.hoursPerDay} hours per day</td><td>${fmtGBP(r.hourlyRate)} / hour</td></tr>
+      </table>
+
+      <div class="method-note">
+        <strong>Method:</strong> STPCD FTE&nbsp;÷&nbsp;${r.directedDays} directed days. The teacher's annual salary already covers paid leave inherent to the 52-week pay year, so the per-directed-day rate is the like-for-like rate the school would pay a directly-employed supply teacher.
+      </div>
+      <div class="meta">Calculated ${ts} &nbsp;·&nbsp; © 2026 JG Education Consultancy. All rights reserved.</div>
+    `;
+  } else {
+    // NJC result — prepend the 25/26 pay-scale notice so it's saved with any printout
+    html += `
+      <div class="njc-warning in-result">
+        <strong>Important — NJC pay scale notice.</strong>
+        The pay scale used is the <strong>2025/26</strong> NJC scale. At the time of this MVP release, the 2026/27 NJC pay offer had <strong>not yet been accepted</strong>. Any parity rate calculated for work undertaken on or after <strong>1 April 2026</strong> using the 25/26 scale will almost certainly need to be recalculated and the pay rate increased once the new scale is agreed.
+      </div>
+      <div class="result-headline">
+        <div class="rate-block">
+          <div class="rate-label">Daily comparator rate (rolled-up)</div>
+          <div class="rate-value">${fmtGBP(r.dailyRolled)}</div>
+          <div class="rate-sub">incl. ${fmtGBP(r.dailyHolidayElement)} holiday element</div>
+        </div>
+        <div class="rate-block">
+          <div class="rate-label">Hourly comparator rate (rolled-up)</div>
+          <div class="rate-value">${fmtGBP(r.hourlyRolled)}</div>
+          <div class="rate-sub">incl. ${fmtGBP(r.hourlyHolidayElement)} holiday element</div>
+        </div>
+      </div>
+
+      <table class="breakdown-table">
+        <tr><td>Pay year</td><td>${meta.payYear}</td></tr>
+        <tr><td>Role</td><td>Support Staff (NJC)</td></tr>
+        <tr><td>Region</td><td>${meta.regionLabel}</td></tr>
+        <tr><td>Pay point</td><td>${meta.payPoint}</td></tr>
+        <tr><td>FTE salary</td><td>${fmtGBP(r.fte)}</td></tr>
+        <tr><td>SEN allowance</td><td>${fmtGBP(r.allowanceTotal)}</td></tr>
+        <tr class="total"><td>Total FTE used</td><td>${fmtGBP(r.totalFte)}</td></tr>
+        <tr class="subtle"><td>FTE hours / week</td><td>${r.fteHoursPerWeek}</td></tr>
+        <tr class="subtle"><td>Working pattern</td><td>${r.actualHoursPerWeek} hrs/wk × ${r.actualWeeks} wks × ${r.actualDaysPerWeek} days/wk</td></tr>
+        <tr><td>Annual basic pay (no holiday)</td><td>${fmtGBP(r.annualNoHoliday)}</td></tr>
+        <tr><td>Holiday percentage (${r.holidayDays} days ÷ ${CONFIG.njc_total_working_days_year - r.holidayDays} working days)</td><td>${fmtPct(r.holidayPct)}</td></tr>
+        <tr><td>Holiday pay element (£ for the period)</td><td>${fmtGBP(r.holidayAmount)}</td></tr>
+        <tr class="total"><td>Annual pay incl. rolled-up holiday</td><td>${fmtGBP(r.annualWithHoliday)}</td></tr>
+        <tr class="subtle"><td>Underlying basic daily rate (no holiday)</td><td>${fmtGBP(r.dailyBasic)}</td></tr>
+        <tr class="subtle"><td>Underlying basic hourly rate (no holiday)</td><td>${fmtGBP(r.hourlyBasic)}</td></tr>
+      </table>
+
+      <div class="method-note">
+        <strong>Method:</strong> FTE salary &rarr; hourly basic (FTE&nbsp;÷&nbsp;52.14&nbsp;÷&nbsp;FTE hours/week) &rarr; pay for actual hours and weeks worked &rarr; rolled-up holiday added at <em>holiday days ÷ (260 − holiday days)</em>. Rolled-up holiday is lawful for irregular-hours and part-year workers under the Working Time Regulations 1998 as amended in April 2024. If the agency prefers to <em>accrue</em> holiday rather than roll it up, the £ holiday-pay element above is the figure to set aside.
+      </div>
+      <div class="meta">Calculated ${ts} &nbsp;·&nbsp; © 2026 JG Education Consultancy. All rights reserved.</div>
+    `;
+  }
+  els.resultPanel.innerHTML = html;
+
+  // How-it-works panel
+  if (isTeacher) {
+    els.howContent.innerHTML = `
+      <p><strong>Inputs used:</strong></p>
+      <ul>
+        <li>FTE salary £${fmtInt(r.fte)} (${meta.regionLabel}, ${meta.payPoint}, ${meta.payYear} pay year)</li>
+        <li>Allowances total £${fmtInt(r.allowanceTotal)}</li>
+        <li>Directed days: ${r.directedDays}</li>
+        <li>Hours per teaching day: ${r.hoursPerDay}</li>
+      </ul>
+      <p><strong>Formula:</strong></p>
+      <ul>
+        <li>Daily rate = (FTE + allowances) ÷ directed days</li>
+        <li>Hourly rate = daily rate ÷ hours per day</li>
+      </ul>
+      <p><strong>Why this method?</strong> The School Teachers' Pay and Conditions Document (STPCD) defines 195 directed days per school year. A school paying a directly-employed supply teacher uses FTE÷195 to derive the daily rate. The teacher's annual salary covers the full 52-week year (including 13 weeks of school holidays); dividing by 195 directed days yields the rate that compensates each working day, including its share of paid leave. This is the position recognised by the major teaching unions (NEU, NASUWT) and routinely accepted in ACAS conciliation and Employment Tribunal cases.</p>
+    `;
+  } else {
+    els.howContent.innerHTML = `
+      <p><strong>Inputs used:</strong></p>
+      <ul>
+        <li>FTE salary £${fmtInt(r.fte)} (${meta.regionLabel}, ${meta.payPoint}, ${meta.payYear} pay year)</li>
+        <li>SEN allowance £${fmtInt(r.allowanceTotal)}</li>
+        <li>FTE hours per week: ${r.fteHoursPerWeek}</li>
+        <li>FTE holiday days: ${r.holidayDays}</li>
+        <li>Actual weeks worked: ${r.actualWeeks}</li>
+        <li>Actual hours per week: ${r.actualHoursPerWeek}</li>
+        <li>Actual days per week: ${r.actualDaysPerWeek}</li>
+      </ul>
+      <p><strong>Formula:</strong></p>
+      <ul>
+        <li>Hourly basic = (FTE + allowances) ÷ 52.14 ÷ FTE hours per week</li>
+        <li>Annual pay (no holiday) = hourly basic × actual hours/week × actual weeks</li>
+        <li>Holiday % = holiday days ÷ (260 − holiday days). At 28 days this resolves to ≈ 12.07%.</li>
+        <li>Annual pay (rolled-up) = annual no-holiday × (1 + holiday %)</li>
+        <li>Daily rate (rolled-up) = annual rolled-up ÷ (actual weeks × days/week)</li>
+        <li>Hourly rate (rolled-up) = annual rolled-up ÷ actual weeks ÷ actual hours per week</li>
+      </ul>
+      <p><strong>Holiday pay treatment.</strong> Rolled-up holiday pay was re-legalised for irregular-hours and part-year workers in April 2024 by the Employment Rights (Amendment, Revocation and Transitional Provision) Regulations 2023, amending the Working Time Regulations 1998. The 12.07% figure (when holiday is 28 days) is the standard derivation: 5.6 weeks holiday ÷ 46.4 working weeks. The figure auto-adjusts above if the school / LA / Trust grants more than statutory minimum.</p>
+      <p><strong>If the agency prefers to accrue holiday</strong> (i.e. pay the worker only for hours worked and pay holiday when leave is taken), the "Holiday pay element" £ figure above is the amount to ring-fence per period.</p>
+      <p><strong>Pension is not included</strong> (excluded from AWR Reg 6 basic pay).</p>
+    `;
+  }
+
+  els.resultSection.classList.remove("hide");
+  els.resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+/* =====================================================================
+   EVENT WIRING
+   ===================================================================== */
+function readNumber(el, fallback) {
+  const v = parseFloat(el.value);
+  if (isNaN(v)) return fallback;
+  return v;
+}
+
+function runCalc() {
+  const role = els.roleType.value;
+  const meta = {
+    payYear: els.payYear.value,
+    regionLabel: els.region.options[els.region.selectedIndex].text,
+    payPoint: els.payPoint.value
+  };
+  let result;
+  if (role === "qt" || role === "uqt") {
+    result = calculateTeacher({
+      role,
+      fte: readNumber(els.fteSalary, 0),
+      allowanceTotal: readNumber(els.tlrAmount, 0) + readNumber(els.senAmount, 0),
+      directedDays: readNumber(els.directedDays, CONFIG.teacher_directed_days),
+      hoursPerDay: readNumber(els.hoursPerDay, CONFIG.teacher_hours_per_day)
+    });
+  } else {
+    result = calculateNjc({
+      fte: readNumber(els.fteSalary, 0),
+      allowanceTotal: readNumber(els.njcSenAmount, 0),
+      fteHoursPerWeek: readNumber(els.fteHoursPerWeek, CONFIG.njc_rest_of_england_hours_per_week),
+      holidayDays: readNumber(els.holidayDays, CONFIG.njc_default_holiday_days),
+      actualWeeks: readNumber(els.actualWeeks, CONFIG.njc_default_actual_weeks),
+      actualHoursPerWeek: readNumber(els.actualHoursPerWeek, CONFIG.njc_rest_of_england_hours_per_week),
+      actualDaysPerWeek: readNumber(els.actualDaysPerWeek, CONFIG.njc_default_days_per_week)
+    });
+  }
+  renderResult(result, meta);
+}
+
+function resetInputs() {
+  els.tlrAmount.value = 0;
+  els.senAmount.value = 0;
+  els.njcSenAmount.value = 0;
+  els.directedDays.value = CONFIG.teacher_directed_days;
+  els.hoursPerDay.value = CONFIG.teacher_hours_per_day;
+  els.holidayDays.value = CONFIG.njc_default_holiday_days;
+  els.actualWeeks.value = CONFIG.njc_default_actual_weeks;
+  els.actualDaysPerWeek.value = CONFIG.njc_default_days_per_week;
+  populatePayPoint();
+  updateRegionDependentFields();
+  els.resultSection.classList.add("hide");
+}
+
+/* =====================================================================
+   INIT
+   ===================================================================== */
+function init() {
+  // Footer / contact
+  els.contactLink.textContent = CONFIG.contact_email;
+  els.contactLink.href = `mailto:${CONFIG.contact_email}?subject=AWR%20comparator%20pay%20-%20enquiry`;
+  els.footerContact.textContent = CONFIG.contact_email;
+  els.footerContact.href = `mailto:${CONFIG.contact_email}?subject=AWR%20calculator%20-%20feedback`;
+
+  // Initial population
+  populatePayYear();
+  els.roleType.value = CONFIG.default_role;
+  populateRegion();
+  populatePayPoint();
+  updateRoleVisibility();
+  updateRegionDependentFields();
+
+  // Wire change events
+  els.payYear.addEventListener("change", () => { populatePayPoint(); updateAllowanceHelpers(); });
+  els.roleType.addEventListener("change", () => {
+    populateRegion();
+    populatePayPoint();
+    updateRoleVisibility();
+    updateRegionDependentFields();
+  });
+  els.region.addEventListener("change", () => { updateFteSalary(); updateRegionDependentFields(); });
+  els.payPoint.addEventListener("change", updateFteSalary);
+
+  els.calcBtn.addEventListener("click", runCalc);
+  els.resetBtn.addEventListener("click", resetInputs);
+
+  // Allow Enter to trigger calculation
+  document.querySelectorAll("input, select").forEach(el => {
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); runCalc(); }
+    });
+  });
+}
+
+document.addEventListener("DOMContentLoaded", init);
+</script>
+</body>
+</html>
