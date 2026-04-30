@@ -389,6 +389,15 @@
       The pay scale shown is the <strong>2025/26</strong> NJC scale. At the time of this MVP release, the 2026/27 NJC pay offer had <strong>not yet been accepted</strong>. Any parity rate calculated for work undertaken on or after <strong>1 April 2026</strong> using the 25/26 scale will almost certainly need to be recalculated and the pay rate increased once the new scale is agreed.
     </div>
     <div class="field">
+      <label for="workingPattern">Working pattern</label>
+      <select id="workingPattern">
+        <option value="term_time_inset">Term-time + INSET (39 weeks / 195 days)</option>
+        <option value="term_time_only">Term-time only (38 weeks / 190 days, no INSET)</option>
+        <option value="all_year">All-year (52 weeks / 260 days)</option>
+      </select>
+      <div class="help">Determines how the calculation treats holiday entitlement. Term-time options use the rolled-up method (12.07% added on top of pay for weeks worked). All-year uses the comparator's FTE as their actual annual pay, with holiday already embedded.</div>
+    </div>
+    <div class="field">
       <label for="njcSenAmount">SEN allowance (£ p.a., optional)</label>
       <input type="number" id="njcSenAmount" min="0" step="1" value="0">
       <div class="help" id="njcSenHelp"></div>
@@ -409,7 +418,7 @@
       <div class="field">
         <label for="actualWeeks">Actual weeks worked</label>
         <input type="number" id="actualWeeks" min="1" max="52" step="0.5" value="39">
-        <div class="help">39 = standard term-time-only.</div>
+        <div class="help">Auto-filled from working pattern. Override only for non-standard patterns.</div>
       </div>
       <div class="field">
         <label for="actualHoursPerWeek">Actual hours per week</label>
@@ -460,7 +469,7 @@
 
 <footer class="app-footer no-print">
   <p>JG Education Consultancy &nbsp;·&nbsp; <a id="footerContact" href="#"></a></p>
-  <p style="font-size: 0.75rem; color: #94a3b8;">© 2026 JG Education Consultancy. All rights reserved. &nbsp;·&nbsp; v0.1 Beta — feedback welcomed</p>
+  <p style="font-size: 0.75rem; color: #94a3b8;">© 2026 JG Education Consultancy. All rights reserved. &nbsp;·&nbsp; v0.2 Beta — feedback welcomed</p>
 </footer>
 
 </div>
@@ -570,6 +579,14 @@ const NJC_REGIONS = [
   { key: 2, label: "Inner London" }
 ];
 
+// Working-pattern presets for support staff — drives default actualWeeks
+// and switches the calculation model (rolled-up vs embedded holiday).
+const NJC_WORKING_PATTERNS = {
+  term_time_inset: { weeks: 39, daysPerYear: 195, label: "Term-time + INSET (39 weeks / 195 days)" },
+  term_time_only:  { weeks: 38, daysPerYear: 190, label: "Term-time only (38 weeks / 190 days, no INSET)" },
+  all_year:        { weeks: 52, daysPerYear: 260, label: "All-year (52 weeks / 260 days)" }
+};
+
 /* =====================================================================
    DOM REFS
    ===================================================================== */
@@ -582,6 +599,7 @@ const els = {
   tlrHelp: $("tlrHelp"), senHelp: $("senHelp"),
   directedDays: $("directedDays"), hoursPerDay: $("hoursPerDay"),
   njcInputs: $("njcInputs"),
+  workingPattern: $("workingPattern"),
   njcSenAmount: $("njcSenAmount"), njcSenHelp: $("njcSenHelp"),
   fteHoursPerWeek: $("fteHoursPerWeek"),
   holidayDays: $("holidayDays"),
@@ -698,6 +716,13 @@ function updateRoleVisibility() {
   }
 }
 
+function applyWorkingPattern() {
+  const pattern = NJC_WORKING_PATTERNS[els.workingPattern.value];
+  if (pattern) {
+    els.actualWeeks.value = pattern.weeks;
+  }
+}
+
 /* =====================================================================
    CALCULATIONS
    ===================================================================== */
@@ -716,39 +741,60 @@ function calculateTeacher(opts) {
 function calculateNjc(opts) {
   const {
     fte, allowanceTotal, fteHoursPerWeek,
-    actualWeeks, actualHoursPerWeek, actualDaysPerWeek
+    actualWeeks, actualHoursPerWeek, actualDaysPerWeek,
+    workingPattern
   } = opts;
   // Hard floor: FTE holiday days cannot fall below 28 (statutory minimum).
-  // Part-year workers are pro-rated via the actualWeeks / actualHoursPerWeek inputs.
   const holidayDays = Math.max(28, opts.holidayDays);
   const totalFte = fte + allowanceTotal;
-  // Hourly basic from FTE (matches CL17 in spreadsheet)
-  const hourlyBasic = (totalFte / CONFIG.njc_weeks_in_year) / fteHoursPerWeek;
-  const weeklyBasic = hourlyBasic * actualHoursPerWeek;
-  const annualNoHoliday = weeklyBasic * actualWeeks;
-  // Holiday-pay percentage = holiday_days / (working_days_year - holiday_days)
-  // Rounded to 4 decimal places to match the published 12.07% figure and the
-  // source spreadsheet exactly. Without this rounding the result is sub-penny
-  // different but cross-checks against existing payroll spreadsheets can flag
-  // the discrepancy unhelpfully.
+
+  // ---- Hourly / daily comparator rates (rolled-up) ----
+  // These formulas are the SAME across all working patterns. The hourly rate is
+  // the basic FTE-derived rate uplifted by the holiday percentage; daily is just
+  // hourly × actual hours per day. Same FTE + same hours = same rolled-up rate
+  // regardless of weeks worked.
+  const hourlyBasicRate = (totalFte / CONFIG.njc_weeks_in_year) / fteHoursPerWeek;
+  // Holiday-pay percentage rounded to 4 dp to match the published 12.07% figure.
   const holidayPctRaw = holidayDays / (CONFIG.njc_total_working_days_year - holidayDays);
   const holidayPct = Math.round(holidayPctRaw * 10000) / 10000;
-  const holidayAmount = annualNoHoliday * holidayPct;
-  const annualWithHoliday = annualNoHoliday + holidayAmount;
-  const totalActualDays = actualWeeks * actualDaysPerWeek;
-  const dailyRolled = annualWithHoliday / totalActualDays;
-  const hourlyRolled = annualWithHoliday / actualWeeks / actualHoursPerWeek;
-  const dailyBasic = annualNoHoliday / totalActualDays;
-  const hourlyBasicOut = annualNoHoliday / actualWeeks / actualHoursPerWeek;
+  const hourlyRolled = hourlyBasicRate * (1 + holidayPct);
+  const hoursPerDay = actualHoursPerWeek / actualDaysPerWeek;
+  const dailyRolled = hourlyRolled * hoursPerDay;
+  const dailyBasic = hourlyBasicRate * hoursPerDay;
+  const hourlyHolidayElement = hourlyRolled - hourlyBasicRate;
   const dailyHolidayElement = dailyRolled - dailyBasic;
-  const hourlyHolidayElement = hourlyRolled - hourlyBasicOut;
+
+  // ---- Annual pay & holiday £ presentation — branches by working pattern ----
+  // Term-time: pay is built up from hours-actually-worked, then 12.07% added on
+  //   top because the worker isn't paid for school holidays (rolled-up method).
+  // All-year: the comparator's FTE IS their annual pay (52-week salary already
+  //   covers the embedded paid leave). For part-time all-year workers the FTE
+  //   is pro-rated by the hours ratio. Holiday element is shown as the portion
+  //   embedded WITHIN the salary, not added on top — preventing the double-count.
+  let annualBasic, annualWithHoliday, holidayAmount;
+  const isAllYear = workingPattern === "all_year";
+  if (isAllYear) {
+    const hoursRatio = actualHoursPerWeek / fteHoursPerWeek;
+    annualWithHoliday = totalFte * hoursRatio;
+    holidayAmount = annualWithHoliday * holidayPct / (1 + holidayPct);
+    annualBasic = annualWithHoliday - holidayAmount;
+  } else {
+    const weeklyBasic = hourlyBasicRate * actualHoursPerWeek;
+    annualBasic = weeklyBasic * actualWeeks;
+    holidayAmount = annualBasic * holidayPct;
+    annualWithHoliday = annualBasic + holidayAmount;
+  }
+
+  const totalActualDays = actualWeeks * actualDaysPerWeek;
+
   return {
-    role: "njc", totalFte, fte, allowanceTotal,
+    role: "njc", workingPattern, totalFte, fte, allowanceTotal,
     fteHoursPerWeek, holidayDays, actualWeeks, actualHoursPerWeek, actualDaysPerWeek,
-    annualNoHoliday, holidayPct, holidayAmount, annualWithHoliday,
+    annualNoHoliday: annualBasic, holidayPct, holidayAmount, annualWithHoliday,
     totalActualDays, dailyRolled, hourlyRolled,
-    dailyBasic, hourlyBasic: hourlyBasicOut,
-    dailyHolidayElement, hourlyHolidayElement
+    dailyBasic, hourlyBasic: hourlyBasicRate,
+    dailyHolidayElement, hourlyHolidayElement,
+    isAllYear
   };
 }
 
@@ -819,21 +865,32 @@ function renderResult(r, meta) {
         <tr><td>Role</td><td>Support Staff (NJC)</td></tr>
         <tr><td>Region</td><td>${meta.regionLabel}</td></tr>
         <tr><td>Pay point</td><td>${meta.payPoint}</td></tr>
+        <tr><td>Working pattern</td><td>${NJC_WORKING_PATTERNS[r.workingPattern].label}</td></tr>
         <tr><td>FTE salary</td><td>${fmtGBP(r.fte)}</td></tr>
         <tr><td>SEN allowance</td><td>${fmtGBP(r.allowanceTotal)}</td></tr>
         <tr class="total"><td>Total FTE used</td><td>${fmtGBP(r.totalFte)}</td></tr>
         <tr class="subtle"><td>FTE hours / week</td><td>${r.fteHoursPerWeek}</td></tr>
-        <tr class="subtle"><td>Working pattern</td><td>${r.actualHoursPerWeek} hrs/wk × ${r.actualWeeks} wks × ${r.actualDaysPerWeek} days/wk</td></tr>
+        <tr class="subtle"><td>Actual pattern</td><td>${r.actualHoursPerWeek} hrs/wk × ${r.actualWeeks} wks × ${r.actualDaysPerWeek} days/wk</td></tr>
+        ${r.isAllYear ? `
+        <tr class="total"><td>Comparator annual pay (= FTE pro-rated for actual hours)</td><td>${fmtGBP(r.annualWithHoliday)}</td></tr>
+        <tr><td>Holiday entitlement</td><td>${r.holidayDays} days</td></tr>
+        <tr><td>Holiday percentage</td><td>${fmtPct(r.holidayPct)}</td></tr>
+        <tr><td>Holiday element <em>embedded within</em> the salary</td><td>${fmtGBP(r.holidayAmount)}</td></tr>
+        <tr class="subtle"><td>Salary excluding holiday element</td><td>${fmtGBP(r.annualNoHoliday)}</td></tr>
+        ` : `
         <tr><td>Annual basic pay (no holiday)</td><td>${fmtGBP(r.annualNoHoliday)}</td></tr>
         <tr><td>Holiday percentage (${r.holidayDays} days ÷ ${CONFIG.njc_total_working_days_year - r.holidayDays} working days)</td><td>${fmtPct(r.holidayPct)}</td></tr>
-        <tr><td>Holiday pay element (£ for the period)</td><td>${fmtGBP(r.holidayAmount)}</td></tr>
+        <tr><td>Holiday pay element (£ <em>added on top</em> for the period)</td><td>${fmtGBP(r.holidayAmount)}</td></tr>
         <tr class="total"><td>Annual pay incl. rolled-up holiday</td><td>${fmtGBP(r.annualWithHoliday)}</td></tr>
+        `}
         <tr class="subtle"><td>Underlying basic daily rate (no holiday)</td><td>${fmtGBP(r.dailyBasic)}</td></tr>
         <tr class="subtle"><td>Underlying basic hourly rate (no holiday)</td><td>${fmtGBP(r.hourlyBasic)}</td></tr>
       </table>
 
       <div class="method-note">
-        <strong>Method:</strong> FTE salary &rarr; hourly basic (FTE&nbsp;÷&nbsp;52.14&nbsp;÷&nbsp;FTE hours/week) &rarr; pay for actual hours and weeks worked &rarr; rolled-up holiday added at <em>holiday days ÷ (260 − holiday days)</em>. Rolled-up holiday is lawful for irregular-hours and part-year workers under the Working Time Regulations 1998 as amended in April 2024. If the agency prefers to <em>accrue</em> holiday rather than roll it up, the £ holiday-pay element above is the figure to set aside.
+        <strong>Method:</strong> ${r.isAllYear
+          ? `All-year salaried worker. FTE is the comparator's actual annual pay (already includes paid leave). The hourly comparator rate is FTE&nbsp;÷&nbsp;52.14&nbsp;÷&nbsp;FTE hours/week, uplifted by the holiday percentage so the agency worker — who is not given separate paid leave — earns equivalent pay per hour actually worked. The holiday element shown above is the portion <em>embedded within</em> the salary, not added on top.`
+          : `Term-time worker. FTE salary &rarr; hourly basic (FTE&nbsp;÷&nbsp;52.14&nbsp;÷&nbsp;FTE hours/week) &rarr; pay for actual hours and weeks worked &rarr; rolled-up holiday added at <em>holiday days ÷ (260 − holiday days)</em>. Rolled-up holiday is lawful for irregular-hours and part-year workers under the Working Time Regulations 1998 as amended in April 2024. If the agency prefers to <em>accrue</em> holiday rather than roll it up, the £ holiday-pay element above is the figure to set aside.`}
       </div>
       <div class="meta">Calculated ${ts} &nbsp;·&nbsp; © 2026 JG Education Consultancy. All rights reserved.</div>
     `;
@@ -863,21 +920,31 @@ function renderResult(r, meta) {
       <ul>
         <li>FTE salary £${fmtInt(r.fte)} (${meta.regionLabel}, ${meta.payPoint}, ${meta.payYear} pay year)</li>
         <li>SEN allowance £${fmtInt(r.allowanceTotal)}</li>
+        <li>Working pattern: ${NJC_WORKING_PATTERNS[r.workingPattern].label}</li>
         <li>FTE hours per week: ${r.fteHoursPerWeek}</li>
         <li>FTE holiday days: ${r.holidayDays}</li>
         <li>Actual weeks worked: ${r.actualWeeks}</li>
         <li>Actual hours per week: ${r.actualHoursPerWeek}</li>
         <li>Actual days per week: ${r.actualDaysPerWeek}</li>
       </ul>
-      <p><strong>Formula:</strong></p>
+      <p><strong>Comparator rate formulas (same in all working patterns):</strong></p>
       <ul>
         <li>Hourly basic = (FTE + allowances) ÷ 52.14 ÷ FTE hours per week</li>
-        <li>Annual pay (no holiday) = hourly basic × actual hours/week × actual weeks</li>
         <li>Holiday % = holiday days ÷ (260 − holiday days). At 28 days this resolves to ≈ 12.07%.</li>
-        <li>Annual pay (rolled-up) = annual no-holiday × (1 + holiday %)</li>
-        <li>Daily rate (rolled-up) = annual rolled-up ÷ (actual weeks × days/week)</li>
-        <li>Hourly rate (rolled-up) = annual rolled-up ÷ actual weeks ÷ actual hours per week</li>
+        <li>Hourly rate (rolled-up) = hourly basic × (1 + holiday %)</li>
+        <li>Daily rate (rolled-up) = hourly rolled-up × (actual hours/week ÷ actual days/week)</li>
       </ul>
+      ${r.isAllYear ? `
+        <p><strong>Annual pay — All-year mode.</strong> The comparator is on a permanent 52-week salaried contract, so their FTE annual salary is their actual annual pay. For part-time all-year workers, the FTE is pro-rated by the hours ratio (actual hours/week ÷ FTE hours/week). The 28 days of paid leave they take during the year are <em>already paid for</em> within the FTE — so the holiday element shown is the portion <em>embedded within</em> the salary, not added on top. This avoids the double-count that would arise from rolling up holiday on top of a salary that already includes paid leave.</p>
+        <p><strong>How the rolled-up rate still applies.</strong> The hourly comparator rate is the basic FTE-derived rate uplifted by 12.07% (or whatever the holiday % resolves to). This is the rate the agency worker should be paid per hour <em>actually worked</em> — because, unlike the comparator, they are not given separate paid leave. Over a year of equivalent work this adds up to roughly the FTE.</p>
+      ` : `
+        <p><strong>Annual pay — Term-time mode.</strong></p>
+        <ul>
+          <li>Annual pay (no holiday) = hourly basic × actual hours/week × actual weeks</li>
+          <li>Annual pay (rolled-up) = annual no-holiday × (1 + holiday %)</li>
+        </ul>
+        <p>For a term-time worker, paid weeks ≈ worked weeks (they are not paid for school holidays), so 12.07% is genuinely added on top of pay for the weeks worked.</p>
+      `}
       <p><strong>Holiday pay treatment.</strong> Rolled-up holiday pay was re-legalised for irregular-hours and part-year workers in April 2024 by the Employment Rights (Amendment, Revocation and Transitional Provision) Regulations 2023, amending the Working Time Regulations 1998. The 12.07% figure (when holiday is 28 days) is the standard derivation: 5.6 weeks holiday ÷ 46.4 working weeks. The figure auto-adjusts above if the school / LA / Trust grants more than statutory minimum.</p>
       <p><strong>If the agency prefers to accrue holiday</strong> (i.e. pay the worker only for hours worked and pay holiday when leave is taken), the "Holiday pay element" £ figure above is the amount to ring-fence per period.</p>
       <p><strong>Pension is not included</strong> (excluded from AWR Reg 6 basic pay).</p>
@@ -921,7 +988,8 @@ function runCalc() {
       holidayDays: readNumber(els.holidayDays, CONFIG.njc_default_holiday_days),
       actualWeeks: readNumber(els.actualWeeks, CONFIG.njc_default_actual_weeks),
       actualHoursPerWeek: readNumber(els.actualHoursPerWeek, CONFIG.njc_rest_of_england_hours_per_week),
-      actualDaysPerWeek: readNumber(els.actualDaysPerWeek, CONFIG.njc_default_days_per_week)
+      actualDaysPerWeek: readNumber(els.actualDaysPerWeek, CONFIG.njc_default_days_per_week),
+      workingPattern: els.workingPattern.value
     });
   }
   renderResult(result, meta);
@@ -934,6 +1002,7 @@ function resetInputs() {
   els.directedDays.value = CONFIG.teacher_directed_days;
   els.hoursPerDay.value = CONFIG.teacher_hours_per_day;
   els.holidayDays.value = CONFIG.njc_default_holiday_days;
+  els.workingPattern.value = "term_time_inset";
   els.actualWeeks.value = CONFIG.njc_default_actual_weeks;
   els.actualDaysPerWeek.value = CONFIG.njc_default_days_per_week;
   populatePayPoint();
@@ -969,6 +1038,7 @@ function init() {
   });
   els.region.addEventListener("change", () => { updateFteSalary(); updateRegionDependentFields(); });
   els.payPoint.addEventListener("change", updateFteSalary);
+  els.workingPattern.addEventListener("change", applyWorkingPattern);
 
   els.calcBtn.addEventListener("click", runCalc);
   els.resetBtn.addEventListener("click", resetInputs);
